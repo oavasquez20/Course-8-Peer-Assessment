@@ -1,0 +1,124 @@
+---
+title: "Course Practical Machine Learning Peer Assessment"
+author: "Oscar Vasquez,         Date: 12-Nov-2020"
+output: html_document
+---
+
+The goal of this project is to predict the manner in which they did the exercise. 
+This is the "classe" variable in the training set. 
+I will use any of the other variables to predict with. 
+I will create a report describing how you built your model, 
+how I used cross validation, what I think the expected out of sample error 
+is, and why I made the choices I did. 
+I will also use your prediction model to predict 20 different test cases.  
+This study is possible thank to  
+http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har
+So thank you very much!  
+
+```{r first, message=FALSE,warning=FALSE,cache=TRUE}  
+#Libraries
+library(AppliedPredictiveModeling)
+library(caret)
+library(corrplot)
+library(dplyr)
+library(e1071)
+library(knitr)
+library(ggplot2)
+library(randomForest)
+library(rpart)
+setwd("D:/Trabajo/R/Curso8")
+set.seed(2)
+#Load Data
+TrainUrl<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+TestUrl<- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+TrainFile <- "./Data/pml-training.csv"
+TestFile  <- "./Data/pml-testing.csv"
+if (!file.exists("./Data")) {
+  dir.create("./Data")}
+if (!file.exists(TrainFile)) {
+  download.file(TrainUrl, destfile=TrainFile)}
+if (!file.exists(TestFile)) {
+  download.file(TestUrl, destfile=TestFile)}
+Train <- read.csv("./Data/pml-training.csv",header=T,sep=",",
+                     na.strings=c("NA",""))
+Test <- read.csv("./Data/pml-testing.csv",header=T,sep=",",
+                    na.strings=c("NA",""))
+dim(Train)
+dim(Test)
+```
+
+Files have 160 variables so its large to see data structure, so I will see just one data structure, lets say Train, Test should be the same structure.
+
+```{r second, message=FALSE,warning=FALSE,cache=TRUE}
+str(Train)
+```
+
+Now I will clean data, for ramdom forest I will select record with more than 60% of data and Variable "X" has a N row indicator so we should not use it to predict classes.
+
+```{r Third, message=FALSE,warning=FALSE,cache=TRUE}
+Train_clean <-Train[,-1]
+Test_clean <-Test[,-1]
+goodColumns <- c((colSums(!is.na(Train_clean[,-ncol(Train_clean)])) >= 0.6*nrow(Train_clean)))
+Train_clean <-Train_clean[,goodColumns]
+Test_clean <-Test_clean[,goodColumns]
+dim(Train)
+dim(Train_clean)
+dim(Test)
+dim(Test_clean)
+```
+
+Lets select training and test for modeling, 80/20.
+
+```{r Fourth, message=FALSE,warning=FALSE,cache=TRUE}
+TestIndex = createDataPartition(Train_clean$classe, p=0.80, list=F)
+Training = Train_clean[TestIndex,]
+Testing = Train_clean[-TestIndex,]
+dim(Training)
+dim(Testing)
+```
+
+Lest Run a Random Forest
+
+```{r Six, message=FALSE,warning=FALSE,cache=TRUE}
+RF1 <- randomForest(classe~.,data=Training)
+RF1
+importance(RF1)
+```
+
+It seems pretty good, really high acuraccy, let clasify Test, for this a trick, predict command will not work with a difference in data types, here we can use R coersity . I will add one case from Training, in order to give same types to all our variables in Test_clean, and when I call predict I will exclude this record
+
+```{r Seven, message=FALSE,warning=FALSE,cache=TRUE}
+
+Test_clean <- rbind(Training[100,1:58], Test_clean[1:58])
+
+Pred_RF1 <- predict(RF1,newdata=Test_clean[-1,])
+
+Pred_RF1
+```
+
+Now a little piece of code to create files with outcomes, remember Knit has its own Knit directory, so set it properly
+
+```{r Eigth, message=FALSE,warning=FALSE,cache=TRUE}
+for(i in 1:20){
+    filename = paste0("./Data/Answer/Output_id_",i,".txt")
+    write.table(Pred_RF1[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
